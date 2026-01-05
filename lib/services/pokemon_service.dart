@@ -5,9 +5,12 @@ import '../models/pokemon.dart';
 class PokemonService {
   static const String _baseUrl = 'https://pokeapi.co/api/v2/pokemon';
 
-  Future<List<Pokemon>> fetchPokemonList({int limit = 100}) async {
+  Future<List<Pokemon>> fetchPokemonList({
+    int limit = 20,
+    int offset = 0,
+  }) async {
    try {
-    final response = await http.get(Uri.parse('$_baseUrl?limit=$limit'));
+    final response = await http.get(Uri.parse('$_baseUrl?limit=$limit&offset=$offset'));
 
     if(response.statusCode == 200) {
       final Map<String, dynamic> data = json.decode(response.body);
@@ -20,5 +23,20 @@ class PokemonService {
    } catch (e) {
     throw Exception('Failed to load Pokemon list: $e');
    } 
+  }
+
+  Future<Pokemon> fetchPokemonDetail(int id) async {
+    try {
+      final response = await http.get(Uri.parse('$_baseUrl/$id'));
+
+      if(response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        return Pokemon.fromDetailJson(data);
+      } else {
+        throw Exception('Failed to load pokemon detail: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Failed to load pokemon detail: $e');
+    }
   }
 }
