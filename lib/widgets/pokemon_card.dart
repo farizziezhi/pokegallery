@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pokegallery/pages/detail_page.dart';
 import 'package:pokegallery/services/pokemon_service.dart';
 import 'package:pokegallery/utils/type_colors.dart';
 import '../models/pokemon.dart';
@@ -49,7 +50,14 @@ class _PokemonCardState extends State<PokemonCard> {
   Widget build(BuildContext context) {
     final backgroundColor = TypeColors.getBackgroundColor(_pokemon.primaryType);
     
-    return Card(
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => DetailPage(pokemon: _pokemon))
+        );
+      },
+      child: Card(
       elevation: 4,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -63,23 +71,26 @@ class _PokemonCardState extends State<PokemonCard> {
             children: [
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Image.network(
-                    _pokemon.imageUrl,
-                    fit: BoxFit.contain,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return const Center(
-                        child: CircularProgressIndicator(),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(
-                        Icons.catching_pokemon,
-                        size: 64,
-                        color: Colors.grey,
-                      );
-                    },
+                  padding: const EdgeInsets.all(12.0),
+                  child: Hero(
+                    tag: 'pokemon-image-${_pokemon.id}',
+                    child: Image.network(
+                      _pokemon.imageUrl,
+                      fit: BoxFit.contain,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return const Center(
+                          child: CircularProgressIndicator(),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(
+                          Icons.catching_pokemon,
+                          size: 64,
+                          color: Colors.grey,
+                        );
+                      },
+                    ),
                   )
                 )
               ),
@@ -121,10 +132,11 @@ class _PokemonCardState extends State<PokemonCard> {
                   ),
               const SizedBox(height: 12,),
               
-            ],
+              ],
+            ),
           ),
         ),
-      ),
+      )
     );
   }
 }

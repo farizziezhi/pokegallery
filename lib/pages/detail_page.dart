@@ -92,7 +92,7 @@ class _DetailPageState extends State<DetailPage> {
             ],
           ),
           Hero(
-            tag: 'pokemon-${_pokemon.id}',
+            tag: 'pokemon-image-${_pokemon.id}',
             child: Image.network(
               _pokemon.imageUrl,
               height: 200,
