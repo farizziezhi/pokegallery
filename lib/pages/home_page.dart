@@ -57,7 +57,8 @@ class _HomePageState extends State<HomePage> {
     if(widget.preloadedPokemon != null && widget.preloadedPokemon!.isNotEmpty) {
       _pokemonList = widget.preloadedPokemon!;
       _isLoading = false;
-      _hasMore = false;
+      _offset = widget.preloadedPokemon!.length;
+      _hasMore = true;
     } else {
       _fetchPokemon();
     }

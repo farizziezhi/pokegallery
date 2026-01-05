@@ -25,37 +25,73 @@ class _SplashScreenState extends State<SplashScreen> {
     try {
       setState(() {
         _loadingText = 'Fetching Pokemon list...';
+        _progress = 0.3;
       });
 
       final pokemonList = await _service.fetchPokemonList(
-        limit: 150,
+        limit: 1025,
         offset: 0,
       );
 
-      final List<Pokemon> detailedPokemon = [];
+      setState(() {
+        _progress = 0.5;
+        _loadingText = '${pokemonList.length} Pokemons found!';
+      });
 
-      for (int i = 0; i < pokemonList.length; i++) {
-        final pokemon = pokemonList[i];
+      final List<Pokemon> detailedPokemon = List.from(pokemonList);
+      int loadedCount = 0;
 
-        try {
-          final detail = await _service.fetchPokemonDetail(pokemon.id);
-          detailedPokemon.add(detail);
-        } catch (e) {
-          detailedPokemon.add(pokemon);
+      bool shouldStop = false;
+
+      Future.delayed(const Duration(seconds: 8), () {
+        shouldStop = true;
+      });
+
+      const batchSize = 20;
+      for (int i = 0; i < pokemonList.length && !shouldStop; i += batchSize) {
+        final end = (i + batchSize < pokemonList.length) ? i + batchSize : pokemonList.length;
+        final batch = pokemonList.sublist(i, end);
+
+        final batchResults = await Future.wait(
+          batch.map((pokemon) async {
+            try {
+              return await _service.fetchPokemonDetail(pokemon.id);
+            } catch (e) {
+              return pokemon;
+            }
+          }),
+        );
+
+        for(int j = 0; j < batchResults.length; j++) {
+          detailedPokemon[i + j] = batchResults[j];
         }
 
+        loadedCount += batchResults.length;
         setState(() {
-          _progress = (i + 1) / pokemonList.length;
-          _loadingText = 'Loading Pokemon ${pokemon.name}...(${i + 1}/${pokemonList.length})';
+          _progress = 0.5 + (loadedCount / pokemonList.length) * 0.5;
+          _loadingText = 'Loading Pokemon details...';
         });
       }
+
+      setState(() {
+        _progress = 1;
+        _loadingText = shouldStop ? 'Loading stopped' : 'Loading completed';
+      });
+
+      await Future.delayed(const Duration(seconds: 1));
+
+      setState(() {
+        _loadingText = 'Preparing gallery...';
+      });
+
+      await Future.delayed(const Duration(seconds: 3));
 
       if (mounted) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
               builder: (context) => HomePage(
-                preloadedPokemon: detailedPokemon,
+                preloadedPokemon: pokemonList,
               ),
             ),
           );
