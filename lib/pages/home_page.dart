@@ -13,15 +13,33 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final PokemonService _pokemonService = PokemonService();
+  final ScrollController _scrollController = ScrollController();
 
   List<Pokemon> _pokemonList = [];
   bool _isLoading = true;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
   String? _errorMessage;
+  int _offset = 0;
+  final int _limit = 20;
 
   @override
   void initState() {
     super.initState();
     _fetchPokemon();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if(_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      _fetchMorePokemon();
+    }
   }
 
   Future<void> _fetchPokemon() async {
@@ -29,18 +47,44 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _isLoading = true;
         _errorMessage = null;
+        _offset = 0;
       });
 
-      final pokemons = await _pokemonService.fetchPokemonList();
+      final pokemons = await _pokemonService.fetchPokemonList(limit: _limit, offset: 0);
 
       setState(() {
         _pokemonList = pokemons;
         _isLoading = false;
+        _offset = _limit;
+        _hasMore = pokemons.length == _limit;
       });
     } catch (e) {
       setState(() {
         _isLoading = false;
         _errorMessage = e.toString();
+      });
+    }
+  }
+
+  Future<void> _fetchMorePokemon() async {
+    if(_isLoadingMore || !_hasMore) return;
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    try {
+      final pokemons = await _pokemonService.fetchPokemonList(limit: _limit, offset: _offset);
+
+      setState(() {
+        _pokemonList.addAll(pokemons);
+        _offset += _limit;
+        _hasMore = pokemons.length == _limit;
+        _isLoadingMore = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingMore = false;
       });
     }
   }
@@ -92,19 +136,31 @@ class _HomePageState extends State<HomePage> {
     
     return Padding(
       padding: const EdgeInsets.all(8.0),
-      child: GridView.builder(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 8,
-          crossAxisSpacing: 8,
-          childAspectRatio: 0.85,
-        ),
-        itemCount: _pokemonList.length,
-        itemBuilder: (context, index) {
-          final pokemon = _pokemonList[index];
-          return PokemonCard(pokemon: pokemon);
-        },
-      )
+      child: Column(
+        children: [
+          Expanded(
+            child: GridView.builder(
+              controller: _scrollController,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                childAspectRatio: 0.75,
+              ),
+              itemCount: _pokemonList.length,
+              itemBuilder: (context, index) {
+                final pokemon = _pokemonList[index];
+                return PokemonCard(pokemon: pokemon);
+              },
+            ),
+          ),
+          if(_isLoadingMore)
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: CircularProgressIndicator(),
+            ),
+        ],
+      ),
     );
   }
 }
