@@ -5,8 +5,9 @@ import '../models/pokemon.dart';
 
 class PokemonCard extends StatefulWidget {
   final Pokemon pokemon;
+  final Function(Pokemon)? onDetailLoaded;
 
-  const PokemonCard({super.key, required this.pokemon});
+  const PokemonCard({super.key, required this.pokemon, this.onDetailLoaded});
 
   @override
   State<PokemonCard> createState() => _PokemonCardState();
@@ -32,6 +33,7 @@ class _PokemonCardState extends State<PokemonCard> {
           _isLoading = false;
           _pokemon = detail;
         });
+        widget.onDetailLoaded?.call(detail);
       }
     } catch (e) {
       if(mounted) {

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pokegallery/widgets/pokemon_card.dart';
 import '../models/pokemon.dart';
 import '../services/pokemon_service.dart';
-
+import '../utils/type_colors.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -14,6 +14,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final PokemonService _pokemonService = PokemonService();
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
 
   List<Pokemon> _pokemonList = [];
   bool _isLoading = true;
@@ -22,6 +23,30 @@ class _HomePageState extends State<HomePage> {
   String? _errorMessage;
   int _offset = 0;
   final int _limit = 20;
+
+  String _searchQuery = '';
+  String? _selectedType;
+
+  final List<String> _typeFilters = [
+    'fire',
+    'water',
+    'grass',
+    'electric',
+    'psychic',
+    'ice',
+    'dragon',
+    'dark',
+    'fairy',
+    'normal',
+    'fighting',
+    'flying',
+    'poison',
+    'ground',
+    'rock',
+    'bug',
+    'ghost',
+    'steel',
+  ];
 
   @override
   void initState() {
@@ -33,7 +58,18 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  List<Pokemon> get _filteredPokemonList {
+    return _pokemonList.where((pokemon) {
+      final matchesSearch = pokemon.name.toLowerCase().contains(_searchQuery.toLowerCase());
+
+      final matchesType = _selectedType == null || pokemon.types.contains(_selectedType);
+
+      return matchesSearch && matchesType;
+    }).toList();
   }
 
   void _onScroll() {
@@ -96,7 +132,85 @@ class _HomePageState extends State<HomePage> {
         title: const Text('Pokemon Gallery', style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: false,
       ),
-      body: _buildBody(),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),),
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchQuery.isNotEmpty ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() {
+                      _searchQuery = '';
+                    });
+                  },
+                ) : null,
+                hintText: 'Search Pokemon',
+                filled: true,
+                fillColor: Colors.grey.shade200,
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value;
+                });
+              },
+            ),
+          ),
+
+          SizedBox(
+            height: 50,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: FilterChip(
+                    label: const Text('All'),
+                    selected: _selectedType == null,
+                    onSelected: (selected) {
+                      setState(() {
+                        _selectedType = null;
+                      });
+                    },
+                    selectedColor: Colors.teal.withValues(alpha: 0.3),
+                  ),
+                ),
+                ..._typeFilters.map((type) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: FilterChip(
+                      label: Text(
+                        type[0].toUpperCase() + type.substring(1),
+                      ),
+                      selected: _selectedType == type,
+                      onSelected: (selected) {
+                        setState(() {
+                          _selectedType = selected ? type : null;
+                        });
+                      },
+                      selectedColor: TypeColors.getColor(type).withValues(alpha: 0.3),
+                      avatar: _selectedType == type ? null : CircleAvatar(
+                        backgroundColor: TypeColors.getColor(type),
+                        radius: 8,
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8,),
+          Expanded(
+            child: _buildBody(),
+          ),
+        ],
+      ),
     );
   }
 
@@ -133,9 +247,32 @@ class _HomePageState extends State<HomePage> {
         ),
       );
     }
+
+    final filtered = _filteredPokemonList;
+    if(filtered.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.catching_pokemon, color: Colors.grey[400], size: 64),
+            SizedBox(height: 16),
+            Text('No Pokemon Found', style: TextStyle(fontSize: 18, color: Colors.grey[600])),
+            if(_searchQuery.isNotEmpty || _selectedType != null)
+              TextButton(onPressed: () {
+                _searchController.clear();
+                setState(() {
+                  _searchQuery = '';
+                  _selectedType = null;
+                });
+              }, child: const Text('Clear Filters')),
+          ],
+        ),
+      );
+    }
+
     
     return Padding(
-      padding: const EdgeInsets.all(8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
       child: Column(
         children: [
           Expanded(
@@ -147,10 +284,20 @@ class _HomePageState extends State<HomePage> {
                 crossAxisSpacing: 8,
                 childAspectRatio: 0.75,
               ),
-              itemCount: _pokemonList.length,
+              itemCount: filtered.length,
               itemBuilder: (context, index) {
-                final pokemon = _pokemonList[index];
-                return PokemonCard(pokemon: pokemon);
+                final pokemon = filtered[index];
+                return PokemonCard(
+                  pokemon: pokemon,
+                  onDetailLoaded: (updatedPokemon) {
+                    final index = _pokemonList.indexWhere((p) => p.id == updatedPokemon.id);
+                    if(index != -1) {
+                      setState(() {
+                        _pokemonList[index] = updatedPokemon;
+                      });
+                    }
+                  },
+                );
               },
             ),
           ),
