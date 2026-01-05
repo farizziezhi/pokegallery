@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:pokegallery/pages/home_page.dart';
+import 'package:pokegallery/pages/splash_screen.dart';
 
 
 void main() {
@@ -28,7 +28,7 @@ class MyApp extends StatelessWidget {
           foregroundColor: Colors.white,
         ),
       ),
-      home: const HomePage(),
+      home: const SplashScreen(),
     );
   }
 }

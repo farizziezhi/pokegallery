@@ -5,7 +5,9 @@ import '../services/pokemon_service.dart';
 import '../utils/type_colors.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final List<Pokemon>? preloadedPokemon;
+
+  const HomePage({super.key, this.preloadedPokemon});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -51,7 +53,14 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _fetchPokemon();
+    
+    if(widget.preloadedPokemon != null && widget.preloadedPokemon!.isNotEmpty) {
+      _pokemonList = widget.preloadedPokemon!;
+      _isLoading = false;
+      _hasMore = false;
+    } else {
+      _fetchPokemon();
+    }
     _scrollController.addListener(_onScroll);
   }
 
